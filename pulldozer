@@ -1,0 +1,195 @@
+#!/usr/bin/env sh
+# Pulldozer: https://github.com/duolingo/pulldozer
+
+set -eu
+
+# Prints an error message to stderr and then exits with 1
+die() {
+  printf '%s%s\nExited without making any changes.%s\n' \
+    "$(tput setaf 1)" "${1:-}" "$(tput sgr0)" >&2
+  exit 1
+}
+
+# Prints an info message to stderr
+log_info() {
+  printf '%s%s%s\n' "$(tput setaf 2)" "${1:-}" "$(tput sgr0)" >&2
+}
+
+# Prints a horizontal divider to stderr
+log_divider() {
+  log_info "$(printf %70s '' | tr ' ' '=')"
+}
+
+# Verify that cURL is installed
+if ! command -v curl > /dev/null; then
+  die 'Please install cURL first.'
+fi
+
+# Loosely verify that Pulldozer is being invoked from inside its repo
+if [ ! -f pulldozer ]; then
+  die 'Pulldozer should be run from inside its own repo, i.e. ./pulldozer'
+fi
+
+# Validate GitHub token
+if ! printf %s "${GITHUB_TOKEN}" | grep -qE '^[a-f0-9]{40}$'; then
+  die 'GITHUB_TOKEN environment variable is missing or invalid!'
+fi
+
+# Source and minimally validate all user-defined variables
+readonly SCRIPT_PATH="${1:-}"
+if [ -z "${SCRIPT_PATH}" ]; then
+  die 'No script file specified!'
+fi
+# shellcheck disable=SC1090
+. "$(realpath "${SCRIPT_PATH}")"
+if [ -z "${COMMIT_MESSAGE:-}" ]; then
+  die "Variable COMMIT_MESSAGE is undefined inside ${SCRIPT_PATH}!"
+fi
+if [ -z "${REPOS:-}" ]; then
+  die "Variable REPOS is undefined inside ${SCRIPT_PATH}!"
+fi
+if ! type transform 2> /dev/null | grep -q function; then
+  die "Function 'transform' is undefined inside ${SCRIPT_PATH}!"
+fi
+
+# Normalize repo specifiers
+normalized_orgrepos=''
+IFS='
+'
+for orgrepo in ${REPOS}; do
+  # Remove whitespace
+  orgrepo="$(printf %s "${orgrepo}" | tr -d '[:space:]')"
+
+  # Validate org and repo name
+  if ! printf %s "${orgrepo}" | grep -qE '^[A-Za-z0-9-]+/[A-Za-z0-9-]+$'; then
+    die "Invalid repo specifier: ${orgrepo}"
+  fi
+
+  normalized_orgrepos="${normalized_orgrepos}${orgrepo}
+"
+done
+normalized_orgrepos="$(printf %s "${normalized_orgrepos}" | sort)"
+
+# Define a helper function for running other functions inside each local repo.
+# Passed-in functions are invoked with a single argument: "$org/$repo"
+do_inside_each_repo() {
+  for orgrepo in ${normalized_orgrepos}; do
+    repo_dir="cache/repos/${orgrepo}"
+    mkdir -p "${repo_dir}"
+    pushed_dir="${PWD}" && cd "${repo_dir}"
+      "${1}" "${orgrepo}"
+    cd "${pushed_dir}"
+  done
+}
+
+# Clone repos
+log_info 'Step 1/4: Refreshing local repo cache...'
+refresh_repo() {
+  # Fetch latest repo commit if already cloned, otherwise shallow clone
+  if [ -d .git ]; then
+    git fetch --depth 1 origin master 2> /dev/null
+    git reset --hard origin/master > /dev/null
+    git branch | grep -vE ' master$' \
+      | xargs git branch -D > /dev/null 2>&1 || true
+  elif ! git clone --depth 1 "https://github.com/${1}.git" .; then
+    die "Failed to clone ${1}"
+    exit 1
+  fi
+}
+do_inside_each_repo refresh_repo
+
+# Create temporary directory for this Pulldozer run
+readonly now="$(date +%s)"
+readonly tmp_dir="${TMPDIR:-/tmp}/pulldozer/${now}"
+mkdir -p "${tmp_dir}"
+
+# Apply code transformation
+log_divider
+log_info 'Step 2/4: Applying code transformation to each local repo...'
+readonly branch_name="pulldozer-${now}"
+readonly combined_diff_file="${tmp_dir}/combined.diff"
+modified_repos=''
+transform_repo() {
+  # Modify code
+  git checkout -b "${branch_name}" 2> /dev/null
+  org="$(printf %s "${orgrepo}" | cut -d/ -f1)"
+  repo="$(printf %s "${orgrepo}" | cut -d/ -f2)"
+  set +u
+  transform "${org}" "${repo}" || die "Failed to transform ${1}."
+  set -u
+
+  if git diff --quiet; then
+    log_info "Repo ${1} remains unchanged."
+  else
+    # Save diff (slightly modified to include org and repo names)
+    git diff \
+      | sed -E \
+        -e "s%^(diff --git a/)(.+) b/(.+)\$%\\1${1}/\\2 b/${1}/\\3%g" \
+        -e "s%^(--- a/)%\\1${1}/%g" \
+        -e "s%^(\\+\\+\\+ b/)%\\1${1}/%g" \
+      >> "${combined_diff_file}"
+
+    # Commit
+    log_info "Repo ${1} was locally modified:"
+    git add --all
+    git commit --message="${COMMIT_MESSAGE}" | tail -1
+    modified_repos="${modified_repos}  - ${1}
+"
+  fi
+}
+do_inside_each_repo transform_repo
+if [ -z "${modified_repos}" ]; then
+  die "Your transformation function didn't modify any of the specified repos."
+fi
+
+# Ask for confirmation before creating PRs
+log_divider
+log_info 'Step 3/4: These repos have been locally modified:'
+log_info
+log_info "${modified_repos}"
+log_info "Local branch name: ${branch_name}"
+log_info "To view all changes, see ${combined_diff_file}"
+log_info "(Edits to this diff file won't take effect. If you really must hand-"
+log_info "tweak some repos' commits, go into cache/repos/ and amend them now.)"
+log_info
+readonly num_prs="$(printf %s "${modified_repos}" | grep -c /)"
+if [ "${num_prs}" = '1' ]; then
+  printf %s "$(tput setaf 2)Create ${num_prs} pull request? [y/n] $(tput sgr0)"
+else
+  printf %s "$(tput setaf 2)Create ${num_prs} pull requests? [y/n] $(tput sgr0)"
+fi
+read -r yn
+if [ "${yn}" != 'y' ]; then
+  die 'Aborted by user.'
+fi
+
+# Create PRs
+log_divider
+log_info 'Step 4/4: Pushing branches to GitHub and creating pull requests...'
+create_pr() {
+  # Skip if unchanged
+  if [ "$(git rev-parse "${branch_name}")" = "$(git rev-parse origin/master)" ]; then
+    return
+  fi
+
+  # Push branch and open PR
+  git push --set-upstream origin "${branch_name}" > /dev/null 2>&1
+  api_response="$(curl -s -X POST \
+    "https://api.github.com/repos/${1}/pulls" \
+    -H "Authorization: bearer ${GITHUB_TOKEN}" \
+    --data @- << EOF
+      {
+        "base": "master",
+        "body": "Created with Pulldozer: https://github.com/duolingo/pulldozer",
+        "head": "${branch_name}",
+        "title": "$(printf %s "${COMMIT_MESSAGE}" | head -1)"
+      }
+EOF
+)"
+  log_info "Created $(printf %s "${api_response}" | grep -E '^  "html_url":' | cut -d'"' -f4)"
+}
+do_inside_each_repo create_pr
+
+# Print success
+log_divider
+log_info 'Done! Please save your transformation script for future reference.'
