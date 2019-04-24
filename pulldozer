@@ -164,8 +164,10 @@ if [ "${yn}" != 'y' ]; then
 fi
 
 # Generate JSON-serialized PR description containing transformation script
+readonly pulldozer_sha="$(git rev-parse HEAD | cut -c-7)"
 readonly pr_description_file="${tmp_dir}/description.md"
-printf 'Created with Pulldozer: https://github.com/duolingo/pulldozer\n\n```shell\n' \
+printf 'Created with Pulldozer: https://github.com/duolingo/pulldozer/tree/%s\n\n```shell\n' \
+  "${pulldozer_sha}" \
   > "${pr_description_file}"
 cat "${SCRIPT_PATH}" >> "${pr_description_file}"
 printf '\n```' >> "${pr_description_file}"
