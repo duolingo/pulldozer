@@ -1,28 +1,27 @@
 # Pulldozer
 
-Pulldozer is a simple CLI tool that helps you batch edit multiple GitHub repos.
+Pulldozer is a simple CLI tool for batch editing multiple GitHub repos.
+
+You give Pulldozer a transformation script and it spits out pull requests. There are no other side effects - your existing local repos will remain untouched.
 
 ## Usage
 
-Clone this repo onto any Unix machine that has [`curl`](https://brewinstall.org/install-curl-on-mac-with-brew/). Set the `GITHUB_TOKEN` environment variable to an [access token](https://github.com/settings/tokens) with `repo` scope.
+Clone this repo onto any Unix machine that has [`curl`](https://brewinstall.org/install-curl-on-mac-with-brew/). Set your `GITHUB_TOKEN` environment variable to an [access token](https://github.com/settings/tokens) with `repo` scope.
 
 To perform a batch edit:
 
-1.  Specify your desired `COMMIT_MESSAGE`, `REPOS`, and `transform` function in a shell script:
+1.  Specify your desired `COMMIT_MESSAGE` string, `REPOS` list, and `transform` function in a shell script:
 
     ```sh
-    # Title of each pull request to be created
     COMMIT_MESSAGE='Fix "langauge" typos'
 
-    # List of GitHub repos to edit
     REPOS='
     artnc/dotfiles
     duolingo/halflife-regression
     duolingo/rtl-viewpager
     '
 
-    # Code to run inside each repo. Arguments: $1=org name, $2=repo name
-    transform() {
+    transform() { # $1=org name, $2=repo name
       # Replace all occurrences of "langauge" with "language"
       git grep --cached -z -l '' | xargs -0 sed -i 's/langauge/language/g'
     }
@@ -53,6 +52,6 @@ To perform a batch edit:
 
     </details>
 
-1.  Run `./pulldozer /path/to/script.sh` to apply your transformation in each repo. Pulldozer will ask for final confirmation and then open pull requests:
+1.  Run `./pulldozer /path/to/script.sh`. Pulldozer will ask for confirmation and then open PRs:
 
     <img src=".github/screenshot.png" alt="Screenshot" width="500">
