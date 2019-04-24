@@ -163,6 +163,30 @@ if [ "${yn}" != 'y' ]; then
   die 'Aborted by user.'
 fi
 
+# Generate JSON-serialized PR description containing transformation script
+readonly pr_description_file="${tmp_dir}/description.md"
+printf 'Created with Pulldozer: https://github.com/duolingo/pulldozer\n\n```shell\n' \
+  > "${pr_description_file}"
+cat "${SCRIPT_PATH}" >> "${pr_description_file}"
+printf '\n```' >> "${pr_description_file}"
+if command -v jq > /dev/null; then
+  readonly pr_description="$(jq -Rs . "${pr_description_file}")"
+elif command -v python > /dev/null; then
+  readonly pr_description="$(python -c \
+    'import codecs,json,sys;print(json.dumps(codecs.open(sys.argv[1]).read()))' \
+    "${pr_description_file}")"
+elif command -v sed > /dev/null; then
+  readonly pr_description="\"$(sed -e ':a' -e 'N' -e '$!ba' \
+    -e 's/\\/\\\\/g' \
+    -e 's@/@\/@g' \
+    -e 's/"/\\"/g' \
+    -e 's/	/\\t/g' \
+    -e 's/\n/\\n/g' \
+    "${pr_description_file}")\""
+else
+  die 'At least one of these must be installed: jq, python, sed'
+fi
+
 # Create PRs
 log_divider
 log_info 'Step 4/4: Pushing branches to GitHub and creating pull requests...'
@@ -180,7 +204,7 @@ create_pr() {
     --data @- << EOF
       {
         "base": "master",
-        "body": "Created with Pulldozer: https://github.com/duolingo/pulldozer",
+        "body": ${pr_description},
         "head": "${branch_name}",
         "title": "$(printf %s "${COMMIT_MESSAGE}" | head -1)"
       }
@@ -189,7 +213,4 @@ EOF
   log_info "Created $(printf %s "${api_response}" | grep -E '^  "html_url":' | cut -d'"' -f4)"
 }
 do_inside_each_repo create_pr
-
-# Print success
-log_divider
-log_info 'Done! Please save your transformation script for future reference.'
+log_info 'Done!'
