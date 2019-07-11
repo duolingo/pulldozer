@@ -55,3 +55,5 @@ To perform a batch edit:
 1.  Run `./pulldozer /path/to/script.sh`. Pulldozer will ask for confirmation and then open PRs:
 
     <img src=".github/screenshot.png" alt="Screenshot" width="500">
+
+_Duolingo is hiring! Apply at https://www.duolingo.com/careers_
