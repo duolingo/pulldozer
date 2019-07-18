@@ -213,22 +213,6 @@ create_pr() {
 EOF
 )"
   log_info "Created $(printf %s "${api_response}" | grep -E '^  "html_url":' | cut -d'"' -f4)"
-
-  # Assign repo owner
-  assignee="$(bash /home/art/git/pulldozer/assignee.sh)"
-  if [[ -n "${assignee}" ]]; then
-    pr_number="$(printf %s "${api_response}" | grep -E '^  +"number":' | grep -oE '[0-9]+')"
-    api_response="$(curl -s -X POST \
-      "https://api.github.com/repos/${1}/issues/${pr_number}/assignees" \
-      -H "Authorization: bearer ${GITHUB_TOKEN}" \
-      --data @- << EOF
-        {
-          "assignees": ["${assignee}"]
-        }
-EOF
-)"
-    log_info "Assigned ${assignee}"
-  fi
 }
 do_inside_each_repo create_pr
 log_info 'Done!'
