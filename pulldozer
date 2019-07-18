@@ -208,7 +208,7 @@ create_pr() {
         "base": "master",
         "body": ${pr_description},
         "head": "${branch_name}",
-        "title": "$(printf %s "${COMMIT_MESSAGE}" | head -1)"
+        "title": "$(printf %s "${COMMIT_MESSAGE}" | head -1 | sed 's/"/\\"/g')"
       }
 EOF
 )"
