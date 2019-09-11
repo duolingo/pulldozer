@@ -52,7 +52,7 @@ To perform a batch edit:
 
     </details>
 
-1.  Run `./pulldozer /path/to/script.sh`. Pulldozer will ask for confirmation and then open PRs:
+1.  Run `./pulldozer /path/to/script.sh`. (To use Bash in your transformation script, prepend `bash` to that command - otherwise Pulldozer assumes POSIX `sh`.) Pulldozer will ask for confirmation and then open PRs:
 
     <img src=".github/screenshot.png" alt="Screenshot" width="500">
 
