@@ -41,7 +41,7 @@ if [ -z "${SCRIPT_PATH}" ]; then
   die 'No script file specified!'
 fi
 # shellcheck disable=SC1090
-. "$(realpath "${SCRIPT_PATH}")"
+. "${SCRIPT_PATH}"
 if [ -z "${COMMIT_MESSAGE:-}" ]; then
   die "Variable COMMIT_MESSAGE is undefined inside ${SCRIPT_PATH}!"
 fi
