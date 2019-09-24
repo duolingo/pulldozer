@@ -41,12 +41,44 @@ To perform a batch edit:
       - You can specify `-E` and then reference parenthesized capture groups with `\1` etc.
       - You can declare multiple substitutions by placing `-e` before each one
       - To [replace newlines](https://stackoverflow.com/a/1252191), add `-e ':a' -e 'N' -e '$!ba'` before your own `-e 's/\n/foobar/g'`
-    - If you'd rather not write shell code, you can always drop into another language:
+
+    </details>
+    <details><summary>Really want to use some other language? Click here for a Python example.</summary>
+
+    The transform functions below will add a `spring.application.name=$REPO_NAME` line immediately after the `app.environment` line in all files matching `src/main/resources/*.properties` that don't already contain a `spring.application.name` line.
+
+    - Python version:
       ```sh
       transform() {
-        org="${1}"
-        repo="${2}"
-        python3 ~/apply-super-complex-transformation-to-repo.py "${org}" "${repo}"
+        python3 - << EOF
+      import re
+      import subprocess
+
+      git_paths = subprocess.check_output("git grep --cached -l ''", shell=True)
+      for path in git_paths.decode().splitlines():
+          if not re.search(r'^src/main/resources/.*\.properties$', path):
+              continue
+          with open(path) as f:
+              contents = f.read()
+          if re.search(r'spring\.application\.name', contents):
+              continue
+          with open(path, 'w') as f:
+              f.write(re.sub(r'(app\.environment=\w*)', r'\1\nspring.application.name=${2}', contents))
+      EOF
+      }
+      ```
+    - Shell version:
+      ```sh
+      transform() {
+        for path in $(git grep --cached -l ''); do
+          if ! printf %s "${path}" | grep -qE '^src/main/resources/.*\.properties$'; then
+            continue
+          fi
+          if grep -qF 'spring.application.name' "${path}"; then
+            continue
+          fi
+          sed -E -i "s/(app\.environment=\w*)/\1\nspring.application.name=${2}/g" "${path}"
+        done
       }
       ```
 
