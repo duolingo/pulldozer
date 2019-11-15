@@ -15,16 +15,16 @@ To perform a batch edit:
     ```sh
     COMMIT_MESSAGE='Fix "langauge" typos'
 
+    transform() { # $1=org name, $2=repo name
+      # Replace all occurrences of "langauge" with "language"
+      git grep --cached -z -l '' | xargs -0 sed -i 's/langauge/language/g'
+    }
+
     REPOS='
     artnc/dotfiles
     duolingo/halflife-regression
     duolingo/rtl-viewpager
     '
-
-    transform() { # $1=org name, $2=repo name
-      # Replace all occurrences of "langauge" with "language"
-      git grep --cached -z -l '' | xargs -0 sed -i 's/langauge/language/g'
-    }
     ```
 
     <details><summary>Shell skills rusty? Click here for a cheat sheet.</summary>
