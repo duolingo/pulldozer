@@ -17,7 +17,7 @@ To perform a batch edit:
 
     transform() { # $1=org name, $2=repo name
       # Replace all occurrences of "langauge" with "language"
-      git grep --cached -z -l '' | xargs -0 sed -i 's/langauge/language/g'
+      git grep --cached -z -l '' | xargs -0 gsed -i 's/langauge/language/g'
     }
 
     REPOS='
@@ -36,7 +36,7 @@ To perform a batch edit:
       - Symlinks and submodules are excluded
     - Pipe a file list into `xargs $command` to run `$command $file` on each file in the list
       - Use `xargs -0` if the input is `\0`-delimited rather than newline-delimited
-    - Replace strings in a file with `sed -i -e 's/myRegex/mySubstitution/g' $file`
+    - Replace strings in a file with `gsed -i -e 's/myRegex/mySubstitution/g' $file`
       - You can use any character in place of `/` as the delimiter if conflicts arise
       - You can specify `-E` and then reference parenthesized capture groups with `\1` etc.
       - You can declare multiple substitutions by placing `-e` before each one
