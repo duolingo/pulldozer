@@ -118,23 +118,23 @@ transform_repo() {
   transform "${org}" "${repo}" || die "Failed to transform ${1}."
   set -u
 
-  if git diff --quiet; then
+  if [ -z "$(git status --short)" ]; then
     log_info "Repo ${1} remains unchanged."
   else
+    # Commit
+    log_info "Repo ${1} was locally modified:"
+    git add --all
+    git commit --message="${COMMIT_MESSAGE}" --no-verify | tail -1
+    modified_repos="${modified_repos}  - ${1}
+"
+
     # Save diff (slightly modified to include org and repo names)
-    git diff \
+    git diff HEAD~ \
       | sed -E \
         -e "s%^(diff --git a/)(.+) b/(.+)\$%\\1${1}/\\2 b/${1}/\\3%g" \
         -e "s%^(--- a/)%\\1${1}/%g" \
         -e "s%^(\\+\\+\\+ b/)%\\1${1}/%g" \
       >> "${combined_diff_file}"
-
-    # Commit
-    log_info "Repo ${1} was locally modified:"
-    git add --all
-    git commit --message="${COMMIT_MESSAGE}" | tail -1
-    modified_repos="${modified_repos}  - ${1}
-"
   fi
 }
 do_inside_each_repo transform_repo
