@@ -89,6 +89,7 @@ refresh_repo() {
   if [ -d .git ]; then
     git fetch --depth 1 origin master 2> /dev/null
     git reset --hard origin/master > /dev/null
+    git clean -dfx > /dev/null
     git branch | grep -vE ' master$' \
       | xargs git branch -D > /dev/null 2>&1 || true
   elif ! git clone --depth 1 "https://github.com/${1}.git" "${PWD}"; then
