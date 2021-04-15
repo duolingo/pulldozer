@@ -51,6 +51,7 @@ fi
 if ! type transform 2> /dev/null | grep -q function; then
   die "Function 'transform' is undefined inside ${SCRIPT_PATH}!"
 fi
+DESCRIPTION="${DESCRIPTION:-}"
 
 # Normalize repo specifiers
 normalized_orgrepos=''
@@ -167,9 +168,13 @@ fi
 # Generate JSON-serialized PR description containing transformation script
 readonly pulldozer_sha="$(git rev-parse HEAD | cut -c-7)"
 readonly pr_description_file="${tmp_dir}/description.md"
+: > "${pr_description_file}"
+if [[ -n "${DESCRIPTION}" ]]; then
+  printf '%s\n\n---\n\n' "${DESCRIPTION}" >> "${pr_description_file}"
+fi
 printf 'Created with Pulldozer: https://github.com/duolingo/pulldozer/tree/%s\n\n```shell\n' \
   "${pulldozer_sha}" \
-  > "${pr_description_file}"
+  >> "${pr_description_file}"
 cat "${SCRIPT_PATH}" >> "${pr_description_file}"
 printf '\n```' >> "${pr_description_file}"
 if command -v jq > /dev/null; then

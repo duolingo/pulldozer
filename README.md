@@ -25,6 +25,9 @@ To perform a batch edit:
     duolingo/halflife-regression
     duolingo/rtl-viewpager
     '
+
+    # Optional: Markdown to include in pull request description
+    DESCRIPTION='[Correct spelling](https://en.wiktionary.org/wiki/language)'
     ```
 
     <details><summary>Shell skills rusty? Click here for a cheat sheet.</summary>
