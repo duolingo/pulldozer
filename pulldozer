@@ -3,16 +3,19 @@
 
 set -eu
 
-# Prints an error message to stderr and then exits with 1
-die() {
-  printf '%s%s\nExited without making any changes.%s\n' \
-    "$(tput setaf 1)" "${1:-}" "$(tput sgr0)" >&2
-  exit 1
-}
-
 # Prints an info message to stderr
 log_info() {
   printf '%s%s%s\n' "$(tput setaf 2)" "${1:-}" "$(tput sgr0)" >&2
+}
+log_error() {
+  printf '%s%s%s\n' "$(tput setaf 1)" "${1:-}" "$(tput sgr0)" >&2
+}
+
+# Prints an error message to stderr and then exits with 1
+die() {
+  log_error "${1:-}
+Exited without making any changes."
+  exit 1
 }
 
 # Prints a horizontal divider to stderr
@@ -205,7 +208,10 @@ create_pr() {
   fi
 
   # Push branch and open PR
-  git push --set-upstream origin "${branch_name}" > /dev/null 2>&1
+  if ! git push --set-upstream origin "${branch_name}" > /dev/null 2>&1; then
+    log_error "Failed to push to ${1}. Do you have write access?"
+    return
+  fi
   api_response="$(curl -s -X POST \
     "https://api.github.com/repos/${1}/pulls" \
     -H "Authorization: bearer ${GITHUB_TOKEN}" \
