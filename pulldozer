@@ -34,7 +34,7 @@ if [ ! -f pulldozer ]; then
 fi
 
 # Validate GitHub token
-if ! printf %s "${GITHUB_TOKEN}" | grep -qE '^[a-f0-9]{40}$'; then
+if ! printf %s "${GITHUB_TOKEN}" | grep -qE '^[0-9A-Za-z_]{32,}$'; then
   die 'GITHUB_TOKEN environment variable is missing or invalid!'
 fi
 
