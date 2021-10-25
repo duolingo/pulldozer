@@ -212,6 +212,7 @@ create_pr() {
     log_error "Failed to push to ${1}. Do you have write access?"
     return
   fi
+  sleep 2
   api_response="$(curl -s -X POST \
     "https://api.github.com/repos/${1}/pulls" \
     -H "Authorization: bearer ${GITHUB_TOKEN}" \
