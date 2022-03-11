@@ -23,6 +23,49 @@ log_divider() {
   log_info "$(printf %70s '' | tr ' ' '=')"
 }
 
+# Helper for users who want something easier than sed
+replace_all() {
+  # Read and validate params
+  before="${1}"
+  shift
+  after="${1}"
+  shift
+  path_regex="${1}"
+  if [ -z "${after}" ]; then
+    die "Usage: replace_all 'search regex' 'replacement' 'file path regex' # last arg optional
+Example: replace_all 'colou?r' 'hue' 'README\.md'"
+  fi
+
+  # Determine char to use as sed delimiter
+  # TODO: Try using unprintable char(s) like \001 as delimiter?
+  delimiter=''
+  for delimiter_candidate in '/' ';' '@' '#' '_' ':' '%'; do
+    if ! printf %s "${before}${after}" | grep -qE "${delimiter_candidate}"; then
+      delimiter="${delimiter_candidate}"
+      break
+    fi
+  done
+  if [ -z "${delimiter}" ]; then
+    die 'replace_all params are too complex - no possible sed delimiter found'
+  fi
+
+  # Perform replacements
+  paths="$(git grep -Il '')"
+  if [ -n "${path_regex}" ]; then
+    paths="$(printf %s "${paths}" | grep -E "${path_regex}")"
+  fi
+  if [ -z "${paths}" ]; then
+    return
+  fi
+  printf %s "${paths}" | while IFS= read -r path; do
+    # https://stackoverflow.com/a/22084103
+    # https://stackoverflow.com/a/1252191
+    sed -E -i.pulldozer-backup -e ':a' -e 'N' -e '$!ba' -e \
+      "s${delimiter}${before}${delimiter}${after}${delimiter}g" "${path}"
+    rm "${path}.pulldozer-backup"
+  done
+}
+
 # Verify that cURL is installed
 if ! command -v curl > /dev/null; then
   die 'Please install cURL first.'

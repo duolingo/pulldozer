@@ -10,14 +10,23 @@ Clone this repo onto any Unix machine that has [`curl`](https://brewinstall.org/
 
 To perform a batch edit:
 
-1.  Specify your desired `COMMIT_MESSAGE` string, `REPOS` list, and `transform` function in a shell script:
+1.  Specify your desired `COMMIT_MESSAGE` string, `transform` function, and `REPOS` list in a new shell script:
 
     ```sh
     COMMIT_MESSAGE='Fix "langauge" typos'
 
-    transform() { # $1=org name, $2=repo name
-      # Replace all occurrences of "langauge" with "language"
-      git grep --cached -z -l '' | xargs -0 gsed -i 's/langauge/language/g'
+    transform() {
+      # Your arbitrary shell commands go here. GitHub org name and repo name are
+      # passed into this `transform` function as vars $1 and $2, respectively.
+      echo "Repo $2 is free of typos!" >> README.md
+
+      # Pulldozer provides a `replace_all` helper function to replace text
+      # across all files. It's basically glorified sed.
+      replace_all 'langauge' 'language'
+
+      # Advanced `replace_all` example: regex, capture groups, multi-line
+      # matching, and file path filtering
+      replace_all '(\nprotobuf==)\S+' '\13.19.4' 'requirements\.(in|txt)$'
     }
 
     REPOS='
@@ -30,22 +39,6 @@ To perform a batch edit:
     DESCRIPTION='[Correct spelling](https://en.wiktionary.org/wiki/language)'
     ```
 
-    <details><summary>Shell skills rusty? Click here for a cheat sheet.</summary>
-
-    - List all Git-tracked files containing `$needle` with `git grep --cached -l $needle`
-      - To simply list all files, specify `-l ''`
-      - `-z` will use `\0` instead of newline as the delimiter
-        - Required if you'll be piping paths containing whitespace into `xargs`
-      - Symlinks and submodules are excluded
-    - Pipe a file list into `xargs $command` to run `$command $file` on each file in the list
-      - Use `xargs -0` if the input is `\0`-delimited rather than newline-delimited
-    - Replace strings in a file with `gsed -i -e 's/myRegex/mySubstitution/g' $file`
-      - You can use any character in place of `/` as the delimiter if conflicts arise
-      - You can specify `-E` and then reference parenthesized capture groups with `\1` etc.
-      - You can declare multiple substitutions by placing `-e` before each one
-      - To [replace newlines](https://stackoverflow.com/a/1252191), add `-e ':a' -e 'N' -e '$!ba'` before your own `-e 's/\n/foobar/g'`
-
-    </details>
     <details><summary>Really want to use some other language? Click here for a Python example.</summary>
 
     The transform functions below will add a `spring.application.name=$REPO_NAME` line immediately after the `app.environment` line in all files matching `src/main/resources/*.properties` that don't already contain a `spring.application.name` line.
