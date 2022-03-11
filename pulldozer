@@ -65,6 +65,10 @@ for orgrepo in ${REPOS}; do
   orgrepo="$(printf %s "${orgrepo}" | tr -d '[:space:]')"
 
   # Validate org and repo name
+  if ! printf %s "${orgrepo}" | grep -q '/'; then
+    die "Invalid repo specifier: ${orgrepo}
+Please specify the org name, e.g. 'artnc/dotfiles' instead of just 'dotfiles'"
+  fi
   if ! printf %s "${orgrepo}" | grep -qE '^[A-Za-z0-9-]+/[A-Za-z0-9_\.-]+$'; then
     die "Invalid repo specifier: ${orgrepo}"
   fi
