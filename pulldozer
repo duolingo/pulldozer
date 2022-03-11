@@ -81,7 +81,7 @@ do_inside_each_repo() {
     repo_dir="cache/repos/${orgrepo}"
     mkdir -p "${repo_dir}"
     pushed_dir="${PWD}" && cd "${repo_dir}"
-      "${1}" "${orgrepo}"
+    "${1}" "${orgrepo}"
     cd "${pushed_dir}"
   done
 }
@@ -139,7 +139,7 @@ transform_repo() {
         -e "s%^(diff --git a/)(.+) b/(.+)\$%\\1${1}/\\2 b/${1}/\\3%g" \
         -e "s%^(--- a/)%\\1${1}/%g" \
         -e "s%^(\\+\\+\\+ b/)%\\1${1}/%g" \
-      >> "${combined_diff_file}"
+        >> "${combined_diff_file}"
   fi
 }
 do_inside_each_repo transform_repo
@@ -172,7 +172,7 @@ fi
 readonly pulldozer_sha="$(git rev-parse HEAD | cut -c-7)"
 readonly pr_description_file="${tmp_dir}/description.md"
 : > "${pr_description_file}"
-if [[ -n "${DESCRIPTION}" ]]; then
+if [[ -n ${DESCRIPTION} ]]; then
   printf '%s\n\n---\n\n' "${DESCRIPTION}" >> "${pr_description_file}"
 fi
 printf 'Created with Pulldozer: https://github.com/duolingo/pulldozer/tree/%s\n\n```shell\n' \
@@ -213,10 +213,11 @@ create_pr() {
     return
   fi
   sleep 2
-  api_response="$(curl -s -X POST \
-    "https://api.github.com/repos/${1}/pulls" \
-    -H "Authorization: bearer ${GITHUB_TOKEN}" \
-    --data @- << EOF
+  api_response="$(
+    curl -s -X POST \
+      "https://api.github.com/repos/${1}/pulls" \
+      -H "Authorization: bearer ${GITHUB_TOKEN}" \
+      --data @- << EOF
       {
         "base": "master",
         "body": ${pr_description},
@@ -224,7 +225,7 @@ create_pr() {
         "title": "$(printf %s "${COMMIT_MESSAGE}" | head -1 | sed 's/"/\\"/g')"
       }
 EOF
-)"
+  )"
   log_info "Created $(printf %s "${api_response}" | grep -E '^  "html_url":' | cut -d'"' -f4)"
 }
 do_inside_each_repo create_pr

@@ -51,6 +51,7 @@ To perform a batch edit:
     The transform functions below will add a `spring.application.name=$REPO_NAME` line immediately after the `app.environment` line in all files matching `src/main/resources/*.properties` that don't already contain a `spring.application.name` line.
 
     - Python version:
+
       ```sh
       transform() {
         python3 - << EOF
@@ -70,6 +71,7 @@ To perform a batch edit:
       EOF
       }
       ```
+
     - Shell version:
       ```sh
       transform() {
