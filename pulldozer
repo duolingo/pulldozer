@@ -36,6 +36,26 @@ replace_all() {
 Example: replace_all 'colou?r' 'hue' 'README\.md'"
   fi
 
+  # Check for GNU sed
+  if man sed | grep -qE '\bGNU\b'; then
+    gnu_sed_command='sed'
+  else
+    gnu_sed_command='gsed'
+    if ! command -v gsed > /dev/null; then
+      if command -v brew > /dev/null; then
+        log_info '`replace_all` requires gsed. Installing via Homebrew...'
+        if HOMEBREW_NO_ENV_HINTS=1 brew install gsed 2> /dev/null; then
+          log_info 'gsed installed successfully!'
+        else
+          die 'Failed to install gsed from Homebrew'
+        fi
+      fi
+      if ! command -v gsed > /dev/null; then
+        die 'Please try again after installing gsed (GNU sed).'
+      fi
+    fi
+  fi
+
   # Determine char to use as sed delimiter
   # TODO: Try using unprintable char(s) like \001 as delimiter?
   delimiter=''
@@ -50,19 +70,11 @@ Example: replace_all 'colou?r' 'hue' 'README\.md'"
   fi
 
   # Perform replacements
-  paths="$(git grep -Il '')"
-  if [ -n "${path_regex}" ]; then
-    paths="$(printf %s "${paths}" | grep -E "${path_regex}")"
-  fi
-  if [ -z "${paths}" ]; then
-    return
-  fi
-  printf %s "${paths}" | while IFS= read -r path; do
-    # https://stackoverflow.com/a/22084103
+  git grep -Il '' | grep -E "${path_regex:-.}" | while read -r path; do
     # https://stackoverflow.com/a/1252191
-    sed -E -i.pulldozer-backup -e ':a' -e 'N' -e '$!ba' -e \
-      "s${delimiter}${before}${delimiter}${after}${delimiter}g" "${path}"
-    rm "${path}.pulldozer-backup"
+    "${gnu_sed_command}" -i -E \
+      ":a;N;\$!ba;s${delimiter}${before}${delimiter}${after}${delimiter}g" \
+      "${path}"
   done
 }
 
@@ -134,7 +146,9 @@ log_info 'Step 1/4: Refreshing local repo cache...'
 refresh_repo() {
   # Fetch latest repo commit if already cloned, otherwise shallow clone
   if [ -d .git ]; then
-    git fetch --depth 1 origin master 2> /dev/null
+    if ! git fetch --depth 1 origin master 2> /dev/null; then
+      die "Failed to fetch ${1}"
+    fi
     git reset --hard origin/master > /dev/null
     git clean -dfx > /dev/null
     git branch | grep -vE ' master$' \

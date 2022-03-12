@@ -18,13 +18,13 @@ To perform a batch edit:
     transform() {
       # Your arbitrary shell commands go here. GitHub org name and repo name are
       # passed into this `transform` function as vars $1 and $2, respectively.
-      echo "Repo $2 is free of typos!" >> README.md
+      echo "Repo $2 is being edited via Pulldozer!" >> README.md
 
-      # Pulldozer provides a `replace_all` helper function to replace text
-      # across all files. It's basically glorified sed.
+      # Pulldozer provides a `replace_all` helper function for replacing text
+      # across all repo files. It's basically glorified sed.
       replace_all 'langauge' 'language'
 
-      # Advanced `replace_all` example: regex, capture groups, multi-line
+      # Advanced `replace_all` example: regex, capture grouping, multi-line
       # matching, and file path filtering
       replace_all '(\nprotobuf==)\S+' '\13.19.4' 'requirements\.(in|txt)$'
     }
@@ -35,7 +35,7 @@ To perform a batch edit:
     duolingo/rtl-viewpager
     '
 
-    # Optional: Markdown to include in pull request description
+    # Optional: Markdown to include in pull request descriptions
     DESCRIPTION='[Correct spelling](https://en.wiktionary.org/wiki/language)'
     ```
 
