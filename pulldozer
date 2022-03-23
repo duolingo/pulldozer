@@ -36,8 +36,8 @@ replace_all() {
 Example: replace_all 'colou?r' 'hue' 'README\.md'"
   fi
 
-  # Check for GNU sed
-  if man sed | grep -qE '\bGNU\b'; then
+  # Check for GNU sed. https://stackoverflow.com/a/65497543
+  if sed --version > /dev/null 2>&1; then
     gnu_sed_command='sed'
   else
     gnu_sed_command='gsed'
