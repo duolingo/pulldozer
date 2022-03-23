@@ -131,7 +131,7 @@ Please specify the org name, e.g. 'artnc/dotfiles' instead of just 'dotfiles'"
   normalized_orgrepos="${normalized_orgrepos}${orgrepo}
 "
 done
-normalized_orgrepos="$(printf %s "${normalized_orgrepos}" | sort)"
+normalized_orgrepos="$(printf %s "${normalized_orgrepos}" | sort | uniq)"
 
 # Define a helper function for running other functions inside each local repo.
 # Passed-in functions are invoked with a single argument: "$org/$repo"
