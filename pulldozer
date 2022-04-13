@@ -31,7 +31,7 @@ replace_all() {
   after="${1}"
   shift
   path_regex="${1}"
-  if [ -z "${after}" ]; then
+  if [ -z "${before}" ]; then
     die "Usage: replace_all 'search regex' 'replacement' 'file path regex' # last arg optional
 Example: replace_all 'colou?r' 'hue' 'README\.md'"
   fi
