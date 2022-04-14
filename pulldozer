@@ -69,8 +69,14 @@ Example: replace_all 'colou?r' 'hue' 'README\.md'"
     die 'replace_all params are too complex - no possible sed delimiter found'
   fi
 
+  # If `before` contains no newlines, use it to speed up git grep
+  git_grep_needle=''
+  if [ -z "$(printf "${before}" | sed 1d)" ]; then
+    git_grep_needle="${before}"
+  fi
+
   # Perform replacements
-  git grep -Il '' | grep -E "${path_regex:-.}" | while read -r path; do
+  git grep -EIl "${git_grep_needle}" | grep -E "${path_regex:-.}" | while read -r path; do
     # https://stackoverflow.com/a/1252191
     "${gnu_sed_command}" -i -E \
       ":a;N;\$!ba;s${delimiter}${before}${delimiter}${after}${delimiter}g" \
