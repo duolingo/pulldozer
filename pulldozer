@@ -142,13 +142,21 @@ normalized_orgrepos="$(printf %s "${normalized_orgrepos}" | sort | uniq)"
 # Define a helper function for running other functions inside each local repo.
 # Passed-in functions are invoked with a single argument: "$org/$repo"
 do_inside_each_repo() {
+  parallel="${2:-}"
   for orgrepo in ${normalized_orgrepos}; do
     repo_dir="cache/repos/${orgrepo}"
     mkdir -p "${repo_dir}"
     pushed_dir="${PWD}" && cd "${repo_dir}"
-    "${1}" "${orgrepo}"
+    if [ -n "${parallel}" ]; then
+      "${1}" "${orgrepo}" &
+    else
+      "${1}" "${orgrepo}"
+    fi
     cd "${pushed_dir}"
   done
+  if [ -n "${parallel}" ]; then
+    wait
+  fi
 }
 
 # Clone repos
@@ -168,7 +176,7 @@ refresh_repo() {
     exit 1
   fi
 }
-do_inside_each_repo refresh_repo
+do_inside_each_repo refresh_repo 1
 
 # Create temporary directory for this Pulldozer run
 readonly now="$(date +%s)"
@@ -239,7 +247,7 @@ fi
 readonly pulldozer_sha="$(git rev-parse HEAD | cut -c-7)"
 readonly pr_description_file="${tmp_dir}/description.md"
 : > "${pr_description_file}"
-if [[ -n ${DESCRIPTION} ]]; then
+if [ -n ${DESCRIPTION} ]; then
   printf '%s\n\n---\n\n' "${DESCRIPTION}" >> "${pr_description_file}"
 fi
 printf 'Created with Pulldozer: https://github.com/duolingo/pulldozer/tree/%s\n\n```shell\n' \
