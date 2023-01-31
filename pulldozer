@@ -250,7 +250,7 @@ readonly pr_description_file="${tmp_dir}/description.md"
 if [ -n ${DESCRIPTION} ]; then
   printf '%s\n\n---\n\n' "${DESCRIPTION}" >> "${pr_description_file}"
 fi
-printf 'Created with Pulldozer: https://github.com/duolingo/pulldozer/tree/%s\n\n```shell\n' \
+printf '<details><summary>Click here to view the <a href="https://github.com/duolingo/pulldozer/tree/%s">Pulldozer</a> transformation script used to create this PR</summary>\n\n```shell\n' \
   "${pulldozer_sha}" \
   >> "${pr_description_file}"
 cat "${SCRIPT_PATH}" >> "${pr_description_file}"
