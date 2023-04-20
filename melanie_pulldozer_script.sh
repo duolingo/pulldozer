@@ -8,20 +8,28 @@ transform() {
 
 REPOS='
 duolingo/duolingo-ios
-duolingo/account-reclamation-backend
+duolingo/schools-web
+duolingo/ai-features-backend
 duolingo/avatars
-duolingo/det-collusion-detection-backend
+duolingo/datahub
+duolingo/det-exam-administration-backend
 duolingo/det-items-factory-backend
-duolingo/drive-thru
+duolingo/diagnostics-backend
+duolingo/duoflow-backend
 duolingo/duolingo-blast
-duolingo/duolingo-schools
+duolingo/duolingo-englishtest
+duolingo/duopress
 duolingo/email-recovery-backend
-duolingo/friends-backend
+duolingo/feed-backend
+duolingo/generic-etl-loader
 duolingo/generic-etl-transformer
-doulingo/localization-lib
+duolingo/leaderboards-backend
+duolingo/login-backend
 duolingo/password-quality-backend
-duolingo/promo-code-backend
+duolingo/practice-games-backend
+duolingo/shop-backend
 duolingo/subscriptions-backend
+duolingo/web-backend
 '
 
 DESCRIPTION='
