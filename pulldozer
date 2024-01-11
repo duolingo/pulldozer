@@ -233,16 +233,16 @@ log_info "(Edits to this diff file won't take effect. If you really must hand-"
 log_info "tweak some repos' commits, go into cache/repos/ and amend them now.)"
 log_info
 readonly num_prs="$(printf %s "${modified_repos}" | grep -c /)"
-if [ "${num_prs}" = '1' ]; then
-  printf %s "$(tput setaf 2)Create ${num_prs} pull request? [y/n] $(tput sgr0)"
-else
-  printf %s "$(tput setaf 2)Create ${num_prs} pull requests? [y/n] $(tput sgr0)"
-fi
 # if CREATE_PRS is set to "y", then skip the prompt
 if [ "${CREATE_PRS:-}" = "y" ]; then
   echo 'CREATE_PRS is set, making pull requests'
   yn="y"
 else
+  if [ "${num_prs}" = '1' ]; then
+    printf %s "$(tput setaf 2)Create ${num_prs} pull request? [y/n] $(tput sgr0)"
+  else
+    printf %s "$(tput setaf 2)Create ${num_prs} pull requests? [y/n] $(tput sgr0)"
+  fi
   read -r yn
 fi
 if [ "${yn}" != 'y' ]; then
