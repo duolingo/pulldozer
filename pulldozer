@@ -240,6 +240,7 @@ else
 fi
 # if CREATE_PRS is set to "y", then skip the prompt
 if [ "${CREATE_PRS:-}" = "y" ]; then
+  echo 'CREATE_PRS is set, making pull requests'
   yn="y"
 else
   read -r yn
