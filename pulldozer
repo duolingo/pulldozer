@@ -238,7 +238,12 @@ if [ "${num_prs}" = '1' ]; then
 else
   printf %s "$(tput setaf 2)Create ${num_prs} pull requests? [y/n] $(tput sgr0)"
 fi
-read -r yn
+# if CREATE_PRS is set to "y", then skip the prompt
+if [ "${CREATE_PRS:-}" = "y" ]; then
+  yn="y"
+else
+  read -r yn
+fi
 if [ "${yn}" != 'y' ]; then
   die 'Aborted by user.'
 fi
