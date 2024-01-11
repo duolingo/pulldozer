@@ -316,6 +316,7 @@ EOF
   printf '%s\n' "${api_response}" > "$(dirname $SCRIPT_PATH)/prs/${repo_file_name}.json"
   log_info "Created $(printf %s "${api_response}" | grep -E '^  "html_url":' | cut -d'"' -f4)"
 }
+mkdir -p "$(dirname $SCRIPT_PATH)/prs"
 rm -rf "$(dirname $SCRIPT_PATH)/prs/*"
 do_inside_each_repo create_pr
 log_info 'Done!'
