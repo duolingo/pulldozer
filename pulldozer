@@ -171,7 +171,7 @@ refresh_repo() {
     git clean -dfx > /dev/null
     git branch | grep -vE ' master$' \
       | xargs git branch -D > /dev/null 2>&1 || true
-  elif ! git clone --depth 1 "https://github.com/${1}.git" "${PWD}"; then
+  elif ! git clone --depth 1 "https://${GITHUB_TOKEN}@github.com/${1}.git" "${PWD}"; then
     die "Failed to clone ${1}"
     exit 1
   fi
@@ -306,7 +306,10 @@ EOF
     log_error 'Created branch but failed to create PR! See error above.'
     exit 1
   fi
+  repo_file_name="$(printf %s "${1}" | tr / _)"
+  printf '%s\n' "${api_response}" > "$(dirname $SCRIPT_PATH)/prs/${repo_file_name}.json"
   log_info "Created $(printf %s "${api_response}" | grep -E '^  "html_url":' | cut -d'"' -f4)"
 }
+rm -rf "$(dirname $SCRIPT_PATH)/prs/*"
 do_inside_each_repo create_pr
 log_info 'Done!'
