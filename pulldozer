@@ -104,18 +104,99 @@ readonly SCRIPT_PATH="${1:-}"
 if [ -z "${SCRIPT_PATH}" ]; then
   die 'No script file specified!'
 fi
-# shellcheck disable=SC1090
-. "${SCRIPT_PATH}"
+readonly script_contents="$(cat "${SCRIPT_PATH}")"
+if printf %s "${SCRIPT_PATH}" | grep -qE '\.js$' || head -1 "${SCRIPT_PATH}" | grep -qE '^#!.*node'; then
+  if ! command -v node > /dev/null; then
+    die 'Please install Node.js first!'
+  fi
+  eval_js() {
+    printf "$(node -e "${script_contents}
+$1")"
+  }
+  readonly COMMIT_MESSAGE="$(eval_js 'console.log(COMMIT_MESSAGE)')"
+  readonly REPOS="$(eval_js 'console.log(REPOS.join("\n"))')"
+  transform() {
+    eval_js "const replace_all = async (before, after, pathRegex) => {
+  const { exec } = require('child_process');
+  const { readFile, writeFile } = require('fs').promises;
+  const { promisify  } = require('util');
+  if (typeof before === 'string') {
+    before = new RegExp(before, 'g');
+  } else if (!before.flags.includes('g')) {
+    before = new RegExp(before.source, before.flags + 'g');
+  }
+  if (pathRegex) {
+    if (typeof pathRegex === 'string') {
+      pathRegex = new RegExp(pathRegex, 'g');
+    } else if (!pathRegex.flags.includes('g')) {
+      pathRegex = new RegExp(pathRegex.source, pathRegex.flags + 'g');
+    }
+  }
+  const { stdout } = await promisify(exec)('git grep -Il .', { maxBuffer: Infinity });
+  await Promise.all(stdout.trim().split('\n').map(async path => {
+    if (pathRegex && !pathRegex.test(path)) {
+      return;
+    }
+    contentsBefore = await readFile(path, 'utf8');
+    contentsAfter = contentsBefore.replace(before, after);
+    if (contentsBefore !== contentsAfter) {
+      await writeFile(path, contentsAfter);
+    }
+  }));
+};
+transform('$1','$2');"
+  }
+  if grep -qE '\bDESCRIPTION *=' "${SCRIPT_PATH}"; then
+    DESCRIPTION="$(eval_js 'console.log(DESCRIPTION)')"
+  fi
+elif printf %s "${SCRIPT_PATH}" | grep -qE '\.py$' || head -1 "${SCRIPT_PATH}" | grep -qE '^#!.*python'; then
+  if command -v python3 > /dev/null; then
+    readonly python_command='python3'
+  elif command -v python > /dev/null; then
+    readonly python_command='python'
+  else
+    die 'Please install Python first!'
+  fi
+  eval_python() {
+    printf "$("${python_command}" -c "${script_contents}
+$1")"
+  }
+  readonly COMMIT_MESSAGE="$(eval_python 'print(locals().get("COMMIT_MESSAGE", ""))')"
+  readonly REPOS="$(eval_python 'print("\n".join(locals().get("REPOS", [])))')"
+  if [ -z "$(eval_python 'print(locals().get("transform", ""))')" ]; then
+    die "Function 'transform' is undefined inside ${SCRIPT_PATH}!"
+  fi
+  transform() {
+    eval_python "import re, subprocess
+def replace_all(before, after, path_regex=None):
+    for path in subprocess.check_output([
+        'git', 'grep', '-Il', ''
+    ]).decode().strip().splitlines():
+        if path_regex and not re.search(path_regex, path):
+            continue
+        with open(path, 'r') as f:
+            contents_before = f.read()
+        contents_after = re.sub(before, after, contents_before)
+        if contents_before != contents_after:
+            with open(path, 'w') as f:
+                f.write(contents_after)
+transform('$1','$2')"
+  }
+  DESCRIPTION="$(eval_python 'print(locals().get("DESCRIPTION",""))')"
+else
+  # shellcheck disable=SC1090
+  . "${SCRIPT_PATH}"
+  if ! type transform 2> /dev/null | grep -q function; then
+    die "Function 'transform' is undefined inside ${SCRIPT_PATH}!"
+  fi
+fi
+DESCRIPTION="${DESCRIPTION:-}"
 if [ -z "${COMMIT_MESSAGE:-}" ]; then
   die "Variable COMMIT_MESSAGE is undefined inside ${SCRIPT_PATH}!"
 fi
 if [ -z "${REPOS:-}" ]; then
   die "Variable REPOS is undefined inside ${SCRIPT_PATH}!"
 fi
-if ! type transform 2> /dev/null | grep -q function; then
-  die "Function 'transform' is undefined inside ${SCRIPT_PATH}!"
-fi
-DESCRIPTION="${DESCRIPTION:-}"
 
 # Normalize repo specifiers
 normalized_orgrepos=''
@@ -250,11 +331,9 @@ readonly pr_description_file="${tmp_dir}/description.md"
 if [ -n "${DESCRIPTION}" ]; then
   printf '%s\n\n---\n\n' "${DESCRIPTION}" >> "${pr_description_file}"
 fi
-printf '<details><summary>Click here to view the <a href="https://github.com/duolingo/pulldozer/tree/%s">Pulldozer</a> transformation script used to create this PR</summary>\n\n```shell\n' \
-  "${pulldozer_sha}" \
+printf '<details><summary>Click here to view the <a href="https://github.com/duolingo/pulldozer/tree/%s">Pulldozer</a> transformation script used to create this PR</summary>\n\n```shell\n%s\n```' \
+  "${pulldozer_sha}" "${script_contents}" \
   >> "${pr_description_file}"
-cat "${SCRIPT_PATH}" >> "${pr_description_file}"
-printf '\n```' >> "${pr_description_file}"
 if command -v jq > /dev/null; then
   readonly pr_description="$(jq -Rs . "${pr_description_file}")"
 elif command -v python > /dev/null; then

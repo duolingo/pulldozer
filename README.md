@@ -2,23 +2,24 @@
 
 Pulldozer is a simple CLI tool for batch editing multiple GitHub repos.
 
-You give Pulldozer a transformation script and it spits out pull requests. There are no other side effects - your existing local repos will remain untouched.
+You give Pulldozer a transformation script and it spits out pull requests. [Duolingo](https://www.duolingo.com/) has used Pulldozer to create well over 9000 PRs to date!
 
 ## Usage
 
-Clone this repo onto any Unix machine that has [`curl`](https://brewinstall.org/install-curl-on-mac-with-brew/). Set your `GITHUB_TOKEN` environment variable to an [access token](https://github.com/settings/tokens) with `repo` scope and [SSO enabled](https://docs.github.com/en/github/authenticating-to-github/authorizing-a-personal-access-token-for-use-with-saml-single-sign-on).
+Clone this repo onto any Unix machine that has [`curl`](https://brewinstall.org/install-curl-on-mac-with-brew/). Set your `GITHUB_TOKEN` environment variable to an [access token](https://github.com/settings/tokens) with `repo` scope and [SSO enabled](https://docs.github.com/en/github/authenticating-to-github/authorizing-a-personal-access-token-for-use-with-saml-single-sign-on). To perform a batch edit (a.k.a. _codemod_):
 
-To perform a batch edit:
+1.  Create a script file that defines a `COMMIT_MESSAGE` string, `transform` function, and `REPOS` list.
 
-1.  Specify your desired `COMMIT_MESSAGE` string, `transform` function, and `REPOS` list in a new shell script:
+    <details><summary>Click here to see a Shell example</summary>
 
     ```sh
     COMMIT_MESSAGE='Fix "langauge" typos'
 
     transform() {
-      # Your arbitrary shell commands go here. GitHub org name and repo name are
-      # passed into this `transform` function as vars $1 and $2, respectively.
-      echo "Repo $2 is being edited via Pulldozer!" >> README.md
+      # Write your transformation logic inside this function. GitHub org name
+      # and repo name are passed into this `transform` function as vars $1 and
+      # $2, respectively.
+      echo "Hello world from $1/$2" > README.md
 
       # Pulldozer provides a `replace_all` helper function for replacing text
       # across all repo files. It's basically glorified sed.
@@ -39,51 +40,82 @@ To perform a batch edit:
     DESCRIPTION='[Correct spelling](https://en.wiktionary.org/wiki/language)'
     ```
 
-    <details><summary>Really want to use some other language? Click here for a Python example.</summary>
+    By default, Pulldozer will interpret your script as POSIX shell. If you want to use Bash instead, just run `bash ./pulldozer` instead of `./pulldozer` during step 2 below.
 
-    The transform functions below will add a `spring.application.name=$REPO_NAME` line immediately after the `app.environment` line in all files matching `src/main/resources/*.properties` that don't already contain a `spring.application.name` line.
+    </details>
+    <details><summary>Click here to see a JavaScript example</summary>
 
-    - Python version:
+    ```js
+    const COMMIT_MESSAGE = 'Fix "langauge" typos';
 
-      ```sh
-      transform() {
-        python3 - << EOF
-      import re
-      import subprocess
+    // Write your transformation logic inside this function. GitHub org name and
+    // repo name are passed in as parameters.
+    const transform = async (org, repo) => {
+      const { writeFile } = require("fs").promises;
+      await writeFile("README.md", `Hello world from ${org}/${repo}`);
 
-      git_paths = subprocess.check_output("git grep --cached -l ''", shell=True)
-      for path in git_paths.decode().splitlines():
-          if not re.search(r'^src/main/resources/.*\.properties$', path):
-              continue
-          with open(path) as f:
-              contents = f.read()
-          if re.search(r'spring\.application\.name', contents):
-              continue
-          with open(path, 'w') as f:
-              f.write(re.sub(r'(app\.environment=\w*)', r'\1\nspring.application.name=${2}', contents))
-      EOF
-      }
-      ```
+      // Pulldozer provides a `replace_all` helper function (no need to import)
+      // for replacing text across all repo files. This helper is easier than
+      // traversing the repo yourself, and it also respects .gitignore.
+      await replace_all("langauge", "language");
 
-    - Shell version:
-      ```sh
-      transform() {
-        for path in $(git grep --cached -l ''); do
-          if ! printf %s "${path}" | grep -qE '^src/main/resources/.*\.properties$'; then
-            continue
-          fi
-          if grep -qF 'spring.application.name' "${path}"; then
-            continue
-          fi
-          sed -E -i "s/(app\.environment=\w*)/\1\nspring.application.name=${2}/g" "${path}"
-        done
-      }
-      ```
+      // Advanced `replace_all` example: regex, capture grouping, multiline
+      // matching, editing only a subset of repo files (optional third param)
+      await replace_all(
+        /(\nprotobuf==)\S+/,
+        "$13.19.4",
+        /requirements\.(in|txt)$/,
+      );
+    };
+
+    const REPOS = [
+      "artnc/dotfiles",
+      "duolingo/halflife-regression",
+      "duolingo/rtl-viewpager",
+    ];
+
+    // Optional: Markdown to include in pull request descriptions
+    const DESCRIPTION =
+      "[Correct spelling](https://en.wiktionary.org/wiki/language)";
+    ```
+
+    </details>
+    <details><summary>Click here to see a Python example</summary>
+
+    ```py
+    COMMIT_MESSAGE = 'Fix "langauge" typos'
+
+    # Write your transformation logic inside this function. GitHub org name and
+    # repo name are passed in as parameters.
+    def transform(org, repo):
+        with open("README.md", "w") as f:
+            f.write(f"Hello world from {org}/{repo}")
+
+        # Pulldozer provides a `replace_all` helper function (no need to import)
+        # for replacing text across all repo files. This helper is easier than
+        # using `os.walk` and `re.sub`, and it also respects .gitignore.
+        replace_all("langauge", "language")
+
+        # Advanced `replace_all` example: regex, capture grouping, multiline
+        # matching, editing only a subset of repo files (optional third param)
+        replace_all(r"(\nprotobuf==)\S+", r"\13.19.4", r"requirements\.(in|txt)$")
+
+    REPOS = [
+        "artnc/dotfiles",
+        "duolingo/halflife-regression",
+        "duolingo/rtl-viewpager",
+    ]
+
+    # Optional: Markdown to include in pull request descriptions
+    DESCRIPTION = "[Correct spelling](https://en.wiktionary.org/wiki/language)"
+    ```
 
     </details>
 
-1.  Run `./pulldozer /path/to/script.sh`. (To use Bash in your transformation script, prepend `bash` to that command - otherwise Pulldozer assumes POSIX `sh`.) Pulldozer will ask for confirmation and then open PRs, each of which will contain your transformation script in its description.
+1.  Run `./pulldozer /path/to/your/script`. Pulldozer will generate a preview diff and ask for confirmation before creating PRs.
 
-    <img src=".github/screenshot.png" alt="Screenshot" width="500">
+## Demo video
+
+![Recording](demo.gif)
 
 _Duolingo is hiring! Apply at https://www.duolingo.com/careers_
