@@ -105,7 +105,7 @@ if [ -z "${SCRIPT_PATH}" ]; then
   die 'No script file specified!'
 fi
 readonly script_contents="$(cat "${SCRIPT_PATH}")"
-if [ "${SCRIPT_PATH}" = *.js ] || head -1 "${SCRIPT_PATH}" | grep -qE '^#!.*node'; then
+if printf %s "${SCRIPT_PATH}" | grep -qE '\.js$' || head -1 "${SCRIPT_PATH}" | grep -qE '^#!.*node'; then
   if ! command -v node > /dev/null; then
     die 'Please install Node.js first!'
   fi
@@ -132,7 +132,7 @@ $1")"
       pathRegex = new RegExp(pathRegex.source, pathRegex.flags + 'g');
     }
   }
-  const { stdout  } = await promisify(exec)('git grep -Il .');
+  const { stdout } = await promisify(exec)('git grep -Il .', { maxBuffer: Infinity });
   await Promise.all(stdout.trim().split('\n').map(async path => {
     if (pathRegex && !pathRegex.test(path)) {
       return;
@@ -149,7 +149,7 @@ transform('$1','$2');"
   if grep -qE '\bDESCRIPTION *=' "${SCRIPT_PATH}"; then
     DESCRIPTION="$(eval_js 'console.log(DESCRIPTION)')"
   fi
-elif [ "${SCRIPT_PATH}" = *.py ] || head -1 "${SCRIPT_PATH}" | grep -qE '^#!.*python'; then
+elif printf %s "${SCRIPT_PATH}" | grep -qE '\.py$' || head -1 "${SCRIPT_PATH}" | grep -qE '^#!.*python'; then
   if command -v python3 > /dev/null; then
     readonly python_command='python3'
   elif command -v python > /dev/null; then
