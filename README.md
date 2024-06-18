@@ -36,8 +36,12 @@ Clone this repo onto any Unix machine that has [`curl`](https://formulae.brew.sh
     duolingo/rtl-viewpager
     '
 
-    # Optional: Markdown to include in pull request descriptions
+    # Optional but recommended: Markdown to include in pull request descriptions
     DESCRIPTION='[Correct spelling](https://en.wiktionary.org/wiki/language)'
+    # Optional: Markdown that will be posted as a comment on PRs
+    COMMENT='This is a pull request comment'
+    # Optional: Declare this variable to enable GitHub auto-merge on PRs
+    AUTOMERGE=1
     ```
 
     By default, Pulldozer will interpret your script as POSIX shell. If you want to use Bash instead, just run `bash ./pulldozer` instead of `./pulldozer` during step 2 below.
@@ -74,9 +78,13 @@ Clone this repo onto any Unix machine that has [`curl`](https://formulae.brew.sh
       "duolingo/rtl-viewpager",
     ];
 
-    // Optional: Markdown to include in pull request descriptions
+    // Optional but recommended: Markdown to include in pull request descriptions
     const DESCRIPTION =
       "[Correct spelling](https://en.wiktionary.org/wiki/language)";
+    // Optional: Markdown that will be posted as a comment on PRs
+    const COMMENT = "This is a pull request comment";
+    // Optional: Declare this variable to enable GitHub auto-merge on PRs
+    const AUTOMERGE = 1;
     ```
 
     </details>
@@ -106,8 +114,12 @@ Clone this repo onto any Unix machine that has [`curl`](https://formulae.brew.sh
         "duolingo/rtl-viewpager",
     ]
 
-    # Optional: Markdown to include in pull request descriptions
+    # Optional but recommended: Markdown to include in pull request descriptions
     DESCRIPTION = "[Correct spelling](https://en.wiktionary.org/wiki/language)"
+    # Optional: Markdown that will be posted as a comment on PRs
+    COMMENT = "This is a pull request comment"
+    # Optional: Declare this variable to enable GitHub auto-merge on PRs
+    AUTOMERGE = 1
     ```
 
     </details>
