@@ -71,9 +71,12 @@ Example: replace_all 'colou?r' 'hue' 'README\.md'"
   done
 }
 
-# Verify that cURL is installed
+# Verify that cURL and jq are installed
 if ! command -v curl > /dev/null; then
   die 'Please install cURL first.'
+fi
+if ! command -v jq > /dev/null; then
+  die 'Please install jq first.'
 fi
 
 # Loosely verify that Pulldozer is being invoked from inside its repo
@@ -321,23 +324,6 @@ fi
 printf '<details><summary>Click here to view the <a href="https://github.com/duolingo/pulldozer/tree/%s">Pulldozer</a> transformation script used to create this PR</summary>\n\n```shell\n%s\n```' \
   "${pulldozer_sha}" "${script_contents}" \
   >> "${pr_description_file}"
-if command -v jq > /dev/null; then
-  readonly pr_description="$(jq -Rs . "${pr_description_file}")"
-elif command -v python > /dev/null; then
-  readonly pr_description="$(python -c \
-    'import codecs,json,sys;print(json.dumps(codecs.open(sys.argv[1]).read()))' \
-    "${pr_description_file}")"
-elif command -v sed > /dev/null; then
-  readonly pr_description="\"$(sed -e ':a' -e 'N' -e '$!ba' \
-    -e 's/\\/\\\\/g' \
-    -e 's@/@\/@g' \
-    -e 's/"/\\"/g' \
-    -e 's/	/\\t/g' \
-    -e 's/\n/\\n/g' \
-    "${pr_description_file}")\""
-else
-  die 'At least one of these must be installed: jq, python, sed'
-fi
 
 # Create PRs
 log_divider
@@ -361,9 +347,9 @@ create_pr() {
       --data @- << EOF
       {
         "base": "master",
-        "body": ${pr_description},
+        "body": $(jq -Rs . "${pr_description_file}"),
         "head": "${branch_name}",
-        "title": "$(printf %s "${COMMIT_MESSAGE}" | head -1 | sed 's/"/\\"/g')"
+        "title": $(printf %s "${COMMIT_MESSAGE}" | jq -Rs .)
       }
 EOF
   )"
@@ -372,7 +358,7 @@ EOF
     log_error 'Created branch but failed to create PR! See error above.'
     exit 1
   fi
-  log_info "Created $(printf %s "${api_response}" | grep -E '^  "html_url":' | cut -d'"' -f4)"
+  log_info "Created $(printf %s "${api_response}" | jq -r .html_url)"
 }
 do_inside_each_repo create_pr
 log_info 'Done!'
