@@ -380,7 +380,7 @@ EOF
     curl -s -X POST \
       'https://api.github.com/graphql' \
       -H "Authorization: bearer ${GITHUB_TOKEN}" \
-      -d '{"query":"mutation{enablePullRequestAutoMerge(input:{mergeMethod:SQUASH,pullRequestId:"'"${pr_node_id}"'"}){pullRequest{id}}}"}' \
+      -d '{"query":"mutation{enablePullRequestAutoMerge(input:{mergeMethod:SQUASH,pullRequestId:\"'"${pr_node_id}"'\"}){pullRequest{id}}}"}' \
       > /dev/null
   fi
 
