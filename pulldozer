@@ -243,17 +243,24 @@ do_inside_each_repo() {
   fi
 }
 
+# Detect the current repo's default branch name
+get_default_branch() {
+  default_branch="$(git rev-parse --abbrev-ref origin/HEAD 2> /dev/null | sed 's|^origin/||')"
+  printf %s "${default_branch:-main}" # GitHub defaults to `main` nowadays
+}
+
 # Clone repos
 log_info 'Step 1/4: Refreshing local repo cache...'
 refresh_repo() {
   # Fetch latest repo commit if already cloned, otherwise shallow clone
   if [ -d .git ]; then
-    if ! git fetch --depth 1 origin master 2> /dev/null; then
+    default_branch="$(get_default_branch)"
+    if ! git fetch --depth 1 origin "${default_branch}" 2> /dev/null; then
       die "Failed to fetch ${1}"
     fi
-    git reset --hard origin/master > /dev/null
+    git reset --hard "origin/${default_branch}" > /dev/null
     git clean -dfx > /dev/null
-    git branch | grep -vE ' master$' \
+    git branch | grep -vE " ${default_branch}\$" \
       | xargs git branch -D > /dev/null 2>&1 || true
   elif ! git clone --depth 1 "https://github.com/${1}.git" "${PWD}"; then
     die "Failed to clone ${1}"
@@ -342,7 +349,8 @@ log_divider
 log_info 'Step 4/4: Pushing branches to GitHub and creating pull requests...'
 create_pr() {
   # Skip if unchanged
-  if [ "$(git rev-parse "${branch_name}")" = "$(git rev-parse origin/master)" ]; then
+  default_branch="$(get_default_branch)"
+  if [ "$(git rev-parse "${branch_name}")" = "$(git rev-parse "origin/${default_branch}")" ]; then
     return
   fi
 
@@ -358,7 +366,7 @@ create_pr() {
       -H "Authorization: bearer ${GITHUB_TOKEN}" \
       --data @- << EOF
       {
-        "base": "master",
+        "base": "${default_branch}",
         "body": $(jq -Rs . "${pr_description_file}"),
         "head": "${branch_name}",
         "title": $(printf %s "${COMMIT_MESSAGE}" | jq -Rs .)
