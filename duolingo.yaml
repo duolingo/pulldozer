@@ -1,7 +1,8 @@
 schema_version: 1
 owner:
   team: "5e39920b835c10012009d96b446e0000" # Platform - Service Delivery
-technology-type: [internal-tool]
+technology-type: []
+audience: internal
 lifecycle:
   state: frozen
   context: "Fleet PR tool; no human commits since 2021 and no deploy path. Kept for reference."
